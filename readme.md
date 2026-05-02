@@ -2,23 +2,28 @@
 
 Simple Python scripts for local AI experiments.
 
-Currently included:
-- `TextToSpeech.py` — generates Portuguese speech using `facebook/mms-tts-por` from Hugging Face.
+## Scripts
+
+| Name | Script | Description | Link |
+|:-------------:|:-------------:|:-------------:|:-------------:|
+| MMS | Simple-TextToSpeech.py | Massively Multilingual Speech (MMS): Portuguese Text-to-Speech | [HuggingFace](https://huggingface.co/facebook/mms-tts-por)
 
 ## Setup
 
+Install the requirements based on the script you want to run. Change MMS to the script name you want
+
 ```powershell
-py -3.12 -m venv .venv
+py -3.12 -m venv .venv-MMS
 .venv\Scripts\activate
-pip install -r requirements.txt
+pip install -r requirements-MMS.txt
 ```
 
 ## Run
 
-### TextToSpeech.py
+Run the correct script inside the correct env:
 
 ```powershell
-python TextToSpeech.py
+python MMS.py
 ```
 
 ## Notes

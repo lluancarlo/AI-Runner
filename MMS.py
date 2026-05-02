@@ -10,7 +10,7 @@ model_name = "facebook/mms-tts-por"
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 model = VitsModel.from_pretrained(model_name).to(device)
 
-text = "Olá. Este é um teste simples de síntese de voz em português."
+text = "Olá Mariana, tudo bem? Você é muito chata"
 inputs = tokenizer(text, return_tensors="pt")
 inputs = {k: v.to(device) for k, v in inputs.items()}
 
