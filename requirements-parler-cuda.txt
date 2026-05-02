@@ -1,0 +1,8 @@
+--index-url https://download.pytorch.org/whl/cu124
+--extra-index-url https://pypi.org/simple
+
+torch==2.5.1+cu124
+torchaudio==2.5.1+cu124
+torchvision==0.20.1+cu124
+soundfile==0.13.1
+git+https://github.com/huggingface/parler-tts.git
