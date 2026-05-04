@@ -15,13 +15,13 @@ INPUT_DIR   = "./input-songs"  # folder with the input .mp3 files
 OUTPUT_DIR  = "./output-songs" # folder where drumless .mp3 files will be saved
 MODEL_NAME  = "htdemucs_ft"    # htdemucs | htdemucs_ft | mdx_extra
 MP3_BITRATE = "320k"           # Output MP3 bitrate
+REMOVE_STEM = "drums"          # drums | bass | vocals | other
 
 
 # ─── helpers ──────────────────────────────────────────────────────────────────
 def load_mp3(path: Path, ffmpeg: str) -> tuple[torch.Tensor, int]:
     with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
         tmp_wav = tmp.name
-
 
     try:
         subprocess.run([
@@ -33,7 +33,6 @@ def load_mp3(path: Path, ffmpeg: str) -> tuple[torch.Tensor, int]:
             tmp_wav
         ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-
         data, sr = sf.read(tmp_wav, dtype="float32", always_2d=True)
         wav = torch.from_numpy(data.T)
         return wav, sr
@@ -42,21 +41,25 @@ def load_mp3(path: Path, ffmpeg: str) -> tuple[torch.Tensor, int]:
             os.unlink(tmp_wav)
 
 
-def save_mp3(path: Path, wav: torch.Tensor, sample_rate: int, ffmpeg: str, bitrate: str):
+def save_mp3(path: Path, source_path: Path, wav: torch.Tensor, sample_rate: int, ffmpeg: str, bitrate: str):
     with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
         tmp_wav = tmp.name
 
-
     try:
         sf.write(tmp_wav, wav.T.contiguous().numpy(), sample_rate, format="WAV")
-
 
         subprocess.run([
             ffmpeg,
             "-y",
             "-i", tmp_wav,
-            "-codec:a", "libmp3lame",
+            "-i", str(source_path),
+            "-map", "0:a:0",
+            "-map", "1:v?",
+            "-map_metadata", "1",
+            "-c:a", "libmp3lame",
             "-b:a", bitrate,
+            "-c:v", "copy",
+            "-id3v2_version", "3",
             str(path)
         ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     finally:
@@ -64,37 +67,35 @@ def save_mp3(path: Path, wav: torch.Tensor, sample_rate: int, ffmpeg: str, bitra
             os.unlink(tmp_wav)
 
 
-
 if __name__ == "__main__":
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"Using: {device.upper()}")
 
-
     ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
     print(f"FFmpeg: {ffmpeg_exe}")
 
-
     os.makedirs(OUTPUT_DIR, exist_ok=True)
-
 
     input_root = Path(INPUT_DIR)
     output_root = Path(OUTPUT_DIR)
     audio_files = sorted(input_root.rglob("*.mp3"))
 
-
     if not audio_files:
         print(f"No .mp3 files found in '{INPUT_DIR}'. Add your songs there and run again.")
         raise SystemExit(0)
-
 
     print(f"Loading model '{MODEL_NAME}'...")
     model = get_model(MODEL_NAME)
     model.to(device)
     model.eval()
 
+    if REMOVE_STEM not in model.sources:
+        print(f"Invalid REMOVE_STEM: '{REMOVE_STEM}'. Available stems: {', '.join(model.sources)}")
+        raise SystemExit(1)
 
+    print(f"Removing stem: {REMOVE_STEM}")
+    print(f"Available stems: {', '.join(model.sources)}")
     print(f"\nFound {len(audio_files)} file(s) to process.\n")
-
 
     for audio_path in audio_files:
         relative_path = audio_path.relative_to(input_root)
@@ -102,45 +103,34 @@ if __name__ == "__main__":
         try:
             wav, sr = load_mp3(audio_path, ffmpeg_exe)
 
-
             if sr != model.samplerate:
                 resampler = torchaudio.transforms.Resample(sr, model.samplerate)
                 wav = resampler(wav)
 
-
             if wav.shape[0] == 1:
                 wav = wav.repeat(2, 1)
 
-
             wav = wav.to(device)
-
 
             with torch.no_grad():
                 sources = apply_model(model, wav.unsqueeze(0), split=True, overlap=0.1)[0]
 
-
-            # drumless = sum of all stems EXCEPT drums
-            drumless = torch.zeros_like(sources[0])
+            result = torch.zeros_like(sources[0])
             for i, stem in enumerate(model.sources):
-                if stem != "drums":
-                    drumless += sources[i]
+                if stem != REMOVE_STEM:
+                    result += sources[i]
 
-
-            drumless = drumless.cpu()
-
+            result = result.cpu()
 
             out_dir = output_root / relative_path.parent
             out_dir.mkdir(parents=True, exist_ok=True)
 
-            out_mp3 = out_dir / f"{audio_path.stem} [drumless].mp3"
-            save_mp3(out_mp3, drumless, model.samplerate, ffmpeg_exe, MP3_BITRATE)
-
+            out_mp3 = out_dir / f"{audio_path.stem} [{REMOVE_STEM}less].mp3"
+            save_mp3(out_mp3, audio_path, result, model.samplerate, ffmpeg_exe, MP3_BITRATE)
 
             print(f"  ✓ Saved: {out_mp3}\n")
 
-
         except Exception as e:
             print(f"  ✗ Error on '{relative_path}': {e}\n")
-
 
     print("Done! All files processed.")
