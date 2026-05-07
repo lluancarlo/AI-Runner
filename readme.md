@@ -32,3 +32,4 @@ Run the script you want with ```python SCRIPT.py```.
 
 - The first run may download model files from Hugging Face.
 - If CUDA is configured correctly, the script can run on your NVIDIA GPU.
+- I run it on windows so I don't know if it works out-of-the-box on linux.
