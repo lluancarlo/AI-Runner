@@ -9,6 +9,7 @@ Simple Python scripts for local AI experiments.
 | mms | mms-text-to-speech.py | Massively Multilingual Speech (MMS): Portuguese Text-to-Speech | [HuggingFace](https://huggingface.co/facebook/mms-tts-por)
 | parler | parler-text-to-speech.py | Parler-TTS Mini Multilingual v1.1 | [HuggingFace](https://huggingface.co/parler-tts/parler-tts-mini-multilingual-v1.1)
 | demucs | drumless-music.py | Demucs v4 local music source separation for generating drumless MP3 tracks; supports htdemucs, htdemucs_ft, and mdx_extra  | [GitHub](https://github.com/facebookresearch/demucs)
+| ltxvideo | ltxvideo.py | LTXVideo video generation model | [HuggingFace](https://huggingface.co/Lightricks/LTX-Video)
 
 
 ## Setup

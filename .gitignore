@@ -44,3 +44,5 @@ Thumbs.db
 # Audio Files
 *.wav
 *.mp3
+*.mp4
+.aider*
